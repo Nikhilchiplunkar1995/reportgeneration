@@ -1,0 +1,23 @@
+
+    <div class="container">
+        @if(product(); as p) {
+          <div class="product-detail-card">
+            <div class="product-image">
+              <img src="https://via.placeholder.com/600x400" alt="Product Image">
+            </div>
+            <div class="product-info">
+              <h1>{{ p.name }}</h1>
+              <p class="description">{{ p.description }}</p>
+              <p class="price">{{ p.price | currency }}</p>
+              <div class="actions">
+                <a [routerLink]="['/products', p.id, 'edit']" class="edit-button">Edit</a>
+                <button (click)="deleteProduct(p.id)" class="delete-button">Delete</button>
+                <a routerLink="/products" class="back-button">Back to Products</a>
+              </div>
+            </div>
+          </div>
+        } @else {
+          <p>Loading product details...</p>
+        }
+    </div>
+  

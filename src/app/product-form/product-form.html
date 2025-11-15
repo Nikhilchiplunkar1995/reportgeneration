@@ -1,0 +1,52 @@
+
+    <div class="form-container">
+      <h1>{{ isEditMode() ? 'Edit Product' : 'Create Product' }}</h1>
+      <form [formGroup]="productForm" (ngSubmit)="onSubmit()">
+        <div class="form-field">
+          <label for="name">Product Name</label>
+          <input id="name" formControlName="name" placeholder="Enter product name">
+          @if (productForm.get('name')?.invalid && (productForm.get('name')?.touched || productForm.get('name')?.dirty)) {
+            <div class="error-message">{{ getErrorMessage('name') }}</div>
+          }
+        </div>
+
+        <div class="form-field">
+          <label for="description">Description</label>
+          <textarea id="description" formControlName="description" placeholder="Enter product description"></textarea>
+           @if (productForm.get('description')?.invalid && (productForm.get('description')?.touched || productForm.get('description')?.dirty)) {
+            <div class="error-message">{{ getErrorMessage('description') }}</div>
+          }
+        </div>
+
+        <div class="form-field">
+          <label for="price">Price</label>
+          <input id="price" type="number" formControlName="price" placeholder="0.00">
+           @if (productForm.get('price')?.invalid && (productForm.get('price')?.touched || productForm.get('price')?.dirty)) {
+            <div class="error-message">{{ getErrorMessage('price') }}</div>
+          }
+        </div>
+
+        <div class="form-field">
+          <label for="category">Category</label>
+          <select id="category" formControlName="categoryId">
+            <option [ngValue]="null" disabled>Select a category</option>
+            @for(category of categories(); track category.id) {
+              <option [value]="category.id">{{ category.name }}</option>
+            }
+          </select>
+           @if (productForm.get('categoryId')?.invalid && (productForm.get('categoryId')?.touched || productForm.get('categoryId')?.dirty)) {
+             <div class="error-message">{{ getErrorMessage('categoryId') }}</div>
+          }
+        </div>
+        
+        @if (productForm.invalid && productForm.touched) {
+            <div class="error-message">Please fill out all required fields.</div>
+        }
+
+        <div class="form-actions">
+          <button type="submit" [disabled]="productForm.invalid">{{ isEditMode() ? 'Update' : 'Create' }}</button>
+          <a routerLink="/products" class="cancel-button">Cancel</a>
+        </div>
+      </form>
+    </div>
+  

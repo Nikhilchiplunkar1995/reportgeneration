@@ -1,0 +1,17 @@
+<div class="form-container">
+  <h1>{{ isEditMode() ? 'Edit' : 'Create' }} Category</h1>
+  <form [formGroup]="categoryForm" (ngSubmit)="onSubmit()">
+    <div class="form-field">
+      <label for="name">Name</label>
+      <input id="name" formControlName="name" />
+      @if (categoryForm.controls.name.invalid && categoryForm.controls.name.touched) {
+        <div class="error">{{ getErrorMessage('name') }}</div>
+      }
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" [disabled]="categoryForm.invalid">{{ isEditMode() ? 'Update' : 'Create' }}</button>
+      <button type="button" (click)="cancel()">Cancel</button>
+    </div>
+  </form>
+</div>

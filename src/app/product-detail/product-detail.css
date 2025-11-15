@@ -1,0 +1,81 @@
+.container {
+      padding: 2rem;
+      background-color: #f4f6f8;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: calc(100vh - 120px);
+    }
+    .product-detail-card {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      background-color: #fff;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+      overflow: hidden;
+      max-width: 900px;
+    }
+    .product-image img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .product-info {
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+    }
+    h1 {
+      font-size: 2.5rem;
+      color: #2c3e50;
+      margin: 0 0 1rem;
+    }
+    .description {
+      font-size: 1.1rem;
+      color: #7f8c8d;
+      margin-bottom: 1.5rem;
+      flex-grow: 1;
+    }
+    .price {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #e74c3c;
+      margin-bottom: 2rem;
+    }
+    .actions {
+      display: flex;
+      gap: 1rem;
+      margin-top: auto;
+    }
+    .back-button, .edit-button, .delete-button {
+      display: inline-block;
+      padding: 0.8rem 1.5rem;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 8px;
+      transition: background-color 0.3s;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 1rem;
+    }
+    .back-button {
+      background-color: #95a5a6;
+    }
+    .back-button:hover {
+      background-color: #7f8c8d;
+    }
+    .edit-button {
+      background-color: #3498db;
+    }
+    .edit-button:hover {
+      background-color: #2980b9;
+    }
+    .delete-button {
+      background-color: #e74c3c;
+    }
+    .delete-button:hover {
+      background-color: #c0392b;
+    }
+  

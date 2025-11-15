@@ -1,0 +1,73 @@
+ .form-container {
+      max-width: 600px;
+      margin: 2rem auto;
+      padding: 2rem;
+      background-color: #fff;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+      margin-bottom: 2rem;
+    }
+    .form-field {
+      margin-bottom: 1.5rem;
+    }
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: bold;
+      color: #34495e;
+    }
+    input, textarea, select {
+      width: 100%;
+      padding: 0.8rem;
+      border: 1px solid #bdc3c7;
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: border-color 0.3s;
+    }
+    input:focus, textarea:focus, select:focus {
+      border-color: #3498db;
+      outline: none;
+    }
+    .error-message {
+      color: #e74c3c;
+      font-size: 0.9rem;
+      margin-top: 0.3rem;
+    }
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+    button[type="submit"] {
+      padding: 0.8rem 1.5rem;
+      background-color: #3498db;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    button[type="submit"]:disabled {
+      background-color: #bdc3c7;
+      cursor: not-allowed;
+    }
+    button[type="submit"]:not(:disabled):hover {
+      background-color: #2980b9;
+    }
+    .cancel-button {
+      padding: 0.8rem 1.5rem;
+      background-color: #e74c3c;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 8px;
+      transition: background-color 0.3s;
+    }
+    .cancel-button:hover {
+      background-color: #c0392b;
+    }
+  

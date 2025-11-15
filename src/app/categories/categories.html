@@ -1,0 +1,21 @@
+<div class="categories-container">
+  <h1>Categories</h1>
+  <button (click)="addCategory()" class="add-category-button">Add Category</button>
+  @if (categories().length > 0) {
+    <ul class="categories-list">
+      @for (category of categories(); track category.id) {
+        <li class="category-item">
+          <span>{{ category.name }}</span>
+          <div class="category-actions">
+            <button (click)="editCategory(category.id)">Edit</button>
+            <button (click)="deleteCategory(category.id)">Delete</button>
+          </div>
+        </li>
+      }
+    </ul>
+  } @else {
+    <div class="empty-state">
+      <p>No categories found. Get started by adding a new one!</p>
+    </div>
+  }
+</div>
