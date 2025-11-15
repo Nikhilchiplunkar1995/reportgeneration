@@ -1,1 +1,316 @@
-\nconst express = require(\'express\');\nconst bodyParser = require(\'body-parser\');\nconst cors = require(\'cors\');\nconst mysql = require(\'mysql2/promise\');\nconst multer = require(\'multer\');\nconst fs = require(\'fs\');\nconst path = require(\'path\');\nconst csv = require(\'fast-csv\');\nconst exceljs = require(\'exceljs\');\nconst bcrypt = require(\'bcrypt\');\nconst jwt = require(\'jsonwebtoken\');\n\nconst app = express();\nconst port = 3001;\nconst JWT_SECRET = \'your_jwt_secret\'; // Replace with a strong secret in a real app\n\n// --- Middleware ---\napp.use(cors());\napp.use(bodyParser.json());\n\n// --- File Upload Setup (Multer) ---\nconst uploadDir = path.join(__dirname, \'uploads\');\nif (!fs.existsSync(uploadDir)) {\n    fs.mkdirSync(uploadDir);\n}\nconst upload = multer({ dest: uploadDir });\n\n// --- MySQL Connection ---\nconst dbConfig = {\n    host: \'localhost\',\n    user: \'user\', // Replace with your MySQL username\n    password: \'password\', // Replace with your MySQL password\n    database: \'sustainability_db\' // Replace with your database name\n};\n\nlet db;\n\nasync function connectToDatabase() {\n    try {\n        db = await mysql.createConnection(dbConfig);\n        console.log(\'Successfully connected to the MySQL database.\');\n    } catch (error) {\n        console.error(\'Error connecting to MySQL database:\', error);\n        process.exit(1);\n    }\n}\n\nconnectToDatabase();\n\n// --- Helper Functions ---\nconst handleDbError = (res, error, message = \'An internal server error occurred.\') => {\n    console.error(error);\n    if (res.headersSent) return;\n    return res.status(500).json({ error: message });\n};\n\n// --- JWT Middleware ---\nconst authenticateToken = (req, res, next) => {\n    const authHeader = req.headers[\'authorization\'];\n    const token = authHeader && authHeader.split(\' \')[1];\n\n    if (token == null) return res.sendStatus(401); // if there isn\'t any token\n\n    jwt.verify(token, JWT_SECRET, (err, user) => {\n        if (err) return res.sendStatus(403);\n        req.user = user;\n        next();\n    });\n};\n\n\n// --- API Endpoints ---\n\n// --- Auth Endpoints ---\napp.post(\'/api/register\', async (req, res) => {\n    try {\n        const { email, password } = req.body;\n        if (!email || !password) {\n            return res.status(400).json({ error: \'Email and password are required\' });\n        }\n\n        const hashedPassword = await bcrypt.hash(password, 10);\n\n        const [result] = await db.execute(\n            \'INSERT INTO users (email, password) VALUES (?, ?)\',\n            [email, hashedPassword]\n        );\n\n        res.status(201).json({ id: result.insertId, email });\n    } catch (error) {\n        if (error.code === \'ER_DUP_ENTRY\') {\n            return res.status(409).json({ error: \'This email is already registered.\' });\n        }\n        handleDbError(res, error, \'Failed to register user.\');\n    }\n});\n\napp.post(\'/api/login\', async (req, res) => {\n    try {\n        const { email, password } = req.body;\n        const [rows] = await db.execute(\'SELECT * FROM users WHERE email = ?\', [email]);\n\n        if (rows.length === 0) {\n            return res.status(401).json({ error: \'Invalid credentials\' });\n        }\n\n        const user = rows[0];\n        const isPasswordValid = await bcrypt.compare(password, user.password);\n\n        if (!isPasswordValid) {\n            return res.status(401).json({ error: \'Invalid credentials\' });\n        }\n\n        const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: \'1h\' });\n        res.json({ token });\n\n    } catch (error) {\n        handleDbError(res, error, \'Failed to login.\');\n    }\n});\n\n// --- Product Endpoints ---\n\n// GET all products (with pagination, sorting, and searching)\napp.get(\'/api/products\', async (req, res) => {\n    try {\n        const { page = 1, limit = 10, sortBy = \'id\', sortOrder = \'asc\', search = \'\', category = \'\' } = req.query;\n\n        const offset = (page - 1) * limit;\n        const validSortBy = [\'id\', \'name\', \'price\'];\n        const sortColumn = validSortBy.includes(sortBy) ? sortBy : \'id\';\n        const sortDirection = sortOrder.toLowerCase() === \'desc\' ? \'DESC\' : \'ASC\';\n\n        let whereClauses = [];\n        let params = [];\n\n        if (search) {\n            whereClauses.push(\'p.name LIKE ?\');\n            params.push(`%${search}%\`);\n        }\n\n        if (category) {\n            whereClauses.push(\'c.name = ?\');\n            params.push(category);\n        }\n\n        const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(\' AND \')}` : \'\';\n\n        const countSql = `SELECT COUNT(*) as total FROM products p JOIN categories c ON p.categoryId = c.id ${whereSql}`;\n        const [countRows] = await db.execute(countSql, params);\n        const total = countRows[0].total;\n\n        const dataSql = `\n            SELECT p.id, p.name, p.price, p.description, p.imageUrl, c.name as categoryName\n            FROM products p\n            JOIN categories c ON p.categoryId = c.id\n            ${whereSql}\n            ORDER BY ${sortColumn} ${sortDirection}\n            LIMIT ?\n            OFFSET ?\n        `;\n\n        const [products] = await db.execute(dataSql, [...params, parseInt(limit), parseInt(offset)]);\n\n        res.json({\n            data: products,\n            pagination: {\n                total,\n                page: parseInt(page),\n                limit: parseInt(limit),\n                totalPages: Math.ceil(total / limit)\n            }\n        });\n\n    } catch (error) {\n        handleDbError(res, error, \'Failed to retrieve products.\');\n    }\n});\n\n// GET product by ID\napp.get(\'/api/products/:id\', async (req, res) => {\n    try {\n        const [rows] = await db.execute(\'SELECT * FROM products WHERE id = ?\', [req.params.id]);\n        if (rows.length > 0) {\n            res.json(rows[0]);\n        } else {\n            res.status(404).send(\'Product not found\');\n        }\n    } catch (error) {\n        handleDbError(res, error, \'Failed to retrieve the product.\');\n    }\n});\n\n// POST a new product (protected)\napp.post(\'/api/products\', authenticateToken, async (req, res) => {\n    try {\n        const { name, categoryId, price, description, imageUrl } = req.body;\n        const [result] = await db.execute(\n            \'INSERT INTO products (name, categoryId, price, description, imageUrl) VALUES (?, ?, ?, ?, ?)\',\n            [name, categoryId, price, description, imageUrl]\n        );\n        const newProduct = { id: result.insertId, name, categoryId, price, description, imageUrl };\n        res.status(201).json(newProduct);\n    } catch (error) {\n        handleDbError(res, error, \'Failed to create the product.\');\n    }\n});\n\n// PATCH an existing product (protected)\napp.patch(\'/api/products/:id\', authenticateToken, async (req, res) => {\n    try {\n        const id = parseInt(req.params.id);\n\n        const [rows] = await db.execute(\'SELECT * FROM products WHERE id = ?\', [id]);\n        if (rows.length === 0) {\n            return res.status(404).send(\'Product not found\');\n        }\n        const existingProduct = rows[0];\n        const updatedProduct = { ...existingProduct, ...req.body };\n\n        const [result] = await db.execute(\n            \'UPDATE products SET name = ?, categoryId = ?, price = ?, description = ?, imageUrl = ? WHERE id = ?\',\n            [updatedProduct.name, updatedProduct.categoryId, updatedProduct.price, updatedProduct.description, updatedProduct.imageUrl, id]\n        );\n\n        if (result.affectedRows > 0) {\n            res.json({ id, ...updatedProduct });\n        } else {\n            res.status(404).send(\'Product not found\');\n        }\n    } catch (error) {\n        handleDbError(res, error, \'Failed to update the product.\');\n    }\n});\n\n// DELETE a product (protected)\napp.delete(\'/api/products/:id\', authenticateToken, async (req, res) => {\n    try {\n        const [result] = await db.execute(\'DELETE FROM products WHERE id = ?\', [req.params.id]);\n        if (result.affectedRows > 0) {\n            res.status(204).send();\n        } else {\n            res.status(404).send(\'Product not found\');\n        }\n    } catch (error) {\n        handleDbError(res, error, \'Failed to delete the product.\');\n    }\n});\n\n// --- Category Endpoints ---\napp.get(\'/api/categories\', async (req, res) => {\n    try {\n        const [rows] = await db.execute(\'SELECT * FROM categories\');\n        res.json(rows);\n    } catch (error) {\n        handleDbError(res, error, \'Failed to retrieve categories.\');\n    }\n});\n\n// --- Bulk Upload and Report Generation Endpoints ---\n\napp.post(\'/api/products/bulk-upload\', upload.single(\'productFile\'), (req, res) => {\n    if (!req.file) {\n        return res.status(400).json({ error: \'No file uploaded.\' });\n    }\n    res.status(202).json({ message: \'Upload received and is being processed.\' });\n    const filePath = req.file.path;\n    const productsToInsert = [];\n    fs.createReadStream(filePath)\n        .pipe(csv.parse({ headers: true, ignoreEmpty: true }))\n        .on(\'error\', error => {\n            console.error(\'Error parsing CSV:\', error);\n            fs.unlinkSync(filePath);\n        })\n        .on(\'data\', row => {\n            if (row.name && row.categoryId && row.price) {\n                productsToInsert.push([\n                    row.name,\n                    parseInt(row.categoryId, 10),\n                    parseFloat(row.price),\n                    row.description || null,\n                    row.imageUrl || null\n                ]);\n            }\n        })\n        .on(\'end\', async (rowCount) => {\n            console.log(`Parsed ${rowCount} rows`);\n            if (productsToInsert.length > 0) {\n                try {\n                    const sql = \'INSERT INTO products (name, categoryId, price, description, imageUrl) VALUES ?\';\n                    await db.query(sql, [productsToInsert]);\n                    console.log(`Successfully inserted ${productsToInsert.length} products.`);\n                } catch (error) {\n                    console.error(\'Error during bulk insert:\', error);\n                }\n            }\n            fs.unlinkSync(filePath);\n        });\n});\n\napp.get(\'/api/products/report\', async (req, res) => {\n    try {\n        const [products] = await db.execute(\n            \'SELECT p.id, p.name, c.name AS category, p.price, p.description, p.imageUrl FROM products p JOIN categories c ON p.categoryId = c.id ORDER BY p.id\'\n        );\n\n        const workbook = new exceljs.Workbook();\n        const worksheet = workbook.addWorksheet(\'Products\');\n\n        worksheet.columns = [\n            { header: \'ID\', key: \'id\', width: 10 },\n            { header: \'Name\', key: \'name\', width: 30 },\n            { header: \'Category\', key: \'category\', width: 20 },\n            { header: \'Price\', key: \'price\', width: 10, style: { numFmt: \'$#,##0.00\' } },\n            { header: \'Description\', key: \'description\', width: 50 },\n            { header: \'Image URL\', key: \'imageUrl\', width: 50 }\n        ];\n\n        worksheet.addRows(products);\n\n        res.setHeader(\'Content-Type\', \'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\');\n        res.setHeader(\'Content-Disposition\', \'attachment; filename=\"product-report.xlsx\"\');\n\n        await workbook.xlsx.write(res);\n        res.end();\n\n    } catch (error) {\n        handleDbError(res, error, \'Failed to generate the report.\');\n    }\n});\n\n// --- Server Listener ---\napp.listen(port, () => {\n    console.log(`API server listening at http://localhost:${port}`);\n});\n
+
+const express = require('express');
+const bodyParser = require('body-parser');
+const cors = require('cors');
+const mysql = require('mysql2/promise');
+const multer = require('multer');
+const fs = require('fs');
+const path = require('path');
+const csv = require('fast-csv');
+const exceljs = require('exceljs');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+
+const app = express();
+const port = 3001;
+const JWT_SECRET = 'your_jwt_secret'; 
+
+app.use(cors());
+app.use(bodyParser.json());
+
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir);
+}
+const upload = multer({ dest: uploadDir });
+
+const dbConfig = {
+    host: 'localhost',
+    user: 'user', 
+    password: 'password', 
+    database: 'sustainability_db' 
+};
+
+let db;
+
+async function connectToDatabase() {
+    try {
+        db = await mysql.createConnection(dbConfig);
+        console.log('Successfully connected to the MySQL database.');
+    } catch (error) {
+        console.error('Error connecting to MySQL database:', error);
+        process.exit(1);
+    }
+}
+
+connectToDatabase();
+
+const handleDbError = (res, error, message = 'An internal server error occurred.') => {
+    console.error(error);
+    if (res.headersSent) return;
+    return res.status(500).json({ error: message });
+};
+
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (token == null) return res.sendStatus(401); 
+
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) return res.sendStatus(403);
+        req.user = user;
+        next();
+    });
+};
+
+app.post('/api/register', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        if (!email || !password) {
+            return res.status(400).json({ error: 'Email and password are required' });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const [result] = await db.execute(
+            'INSERT INTO users (email, password) VALUES (?, ?)',
+            [email, hashedPassword]
+        );
+
+        res.status(201).json({ id: result.insertId, email });
+    } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({ error: 'This email is already registered.' });
+        }
+        handleDbError(res, error, 'Failed to register user.');
+    }
+});
+
+app.post('/api/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        const [rows] = await db.execute('SELECT * FROM users WHERE email = ?', [email]);
+
+        if (rows.length === 0) {
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
+
+        const user = rows[0];
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+
+        if (!isPasswordValid) {
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
+
+        const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '1h' });
+        res.json({ token });
+
+    } catch (error) {
+        handleDbError(res, error, 'Failed to login.');
+    }
+});
+
+app.get('/api/products', async (req, res) => {
+    try {
+        const { page = 1, limit = 10, sortBy = 'id', sortOrder = 'asc', search = '', category = '' } = req.query;
+
+        const offset = (page - 1) * limit;
+        const validSortBy = ['id', 'name', 'price'];
+        const sortColumn = validSortBy.includes(sortBy) ? sortBy : 'id';
+        const sortDirection = sortOrder.toLowerCase() === 'desc' ? 'DESC' : 'ASC';
+
+        let whereClauses = [];
+        let params = [];
+
+        if (search) {
+            whereClauses.push('p.name LIKE ?');
+            params.push(`%${search}%`);
+        }
+
+        if (category) {
+            whereClauses.push('c.name = ?');
+            params.push(category);
+        }
+
+        const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+        const countSql = `SELECT COUNT(*) as total FROM products p JOIN categories c ON p.categoryId = c.id ${whereSql}`;
+        const [countRows] = await db.execute(countSql, params);
+        const total = countRows[0].total;
+
+        const dataSql = `
+            SELECT p.id, p.name, p.price, p.description, p.imageUrl, c.name as categoryName
+            FROM products p
+            JOIN categories c ON p.categoryId = c.id
+            ${whereSql}
+            ORDER BY ${sortColumn} ${sortDirection}
+            LIMIT ?
+            OFFSET ?
+        `;
+
+        const [products] = await db.execute(dataSql, [...params, parseInt(limit), parseInt(offset)]);
+
+        res.json({
+            data: products,
+            pagination: {
+                total,
+                page: parseInt(page),
+                limit: parseInt(limit),
+                totalPages: Math.ceil(total / limit)
+            }
+        });
+
+    } catch (error) {
+        handleDbError(res, error, 'Failed to retrieve products.');
+    }
+});
+
+app.get('/api/products/:id', async (req, res) => {
+    try {
+        const [rows] = await db.execute('SELECT * FROM products WHERE id = ?', [req.params.id]);
+        if (rows.length > 0) {
+            res.json(rows[0]);
+        } else {
+            res.status(404).send('Product not found');
+        }
+    } catch (error) {
+        handleDbError(res, error, 'Failed to retrieve the product.');
+    }
+});
+
+app.post('/api/products', authenticateToken, async (req, res) => {
+    try {
+        const { name, categoryId, price, description, imageUrl } = req.body;
+        const [result] = await db.execute(
+            'INSERT INTO products (name, categoryId, price, description, imageUrl) VALUES (?, ?, ?, ?, ?)',
+            [name, categoryId, price, description, imageUrl]
+        );
+        const newProduct = { id: result.insertId, name, categoryId, price, description, imageUrl };
+        res.status(201).json(newProduct);
+    } catch (error) {
+        handleDbError(res, error, 'Failed to create the product.');
+    }
+});
+
+app.patch('/api/products/:id', authenticateToken, async (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+
+        const [rows] = await db.execute('SELECT * FROM products WHERE id = ?', [id]);
+        if (rows.length === 0) {
+            return res.status(404).send('Product not found');
+        }
+        const existingProduct = rows[0];
+        const updatedProduct = { ...existingProduct, ...req.body };
+
+        const [result] = await db.execute(
+            'UPDATE products SET name = ?, categoryId = ?, price = ?, description = ?, imageUrl = ? WHERE id = ?',
+            [updatedProduct.name, updatedProduct.categoryId, updatedProduct.price, updatedProduct.description, updatedProduct.imageUrl, id]
+        );
+
+        if (result.affectedRows > 0) {
+            res.json({ id, ...updatedProduct });
+        } else {
+            res.status(404).send('Product not found');
+        }
+    } catch (error) {
+        handleDbError(res, error, 'Failed to update the product.');
+    }
+});
+
+app.delete('/api/products/:id', authenticateToken, async (req, res) => {
+    try {
+        const [result] = await db.execute('DELETE FROM products WHERE id = ?', [req.params.id]);
+        if (result.affectedRows > 0) {
+            res.status(204).send();
+        } else {
+            res.status(404).send('Product not found');
+        }
+    } catch (error) {
+        handleDbError(res, error, 'Failed to delete the product.');
+    }
+});
+
+app.get('/api/categories', async (req, res) => {
+    try {
+        const [rows] = await db.execute('SELECT * FROM categories');
+        res.json(rows);
+    } catch (error) {
+        handleDbError(res, error, 'Failed to retrieve categories.');
+    }
+});
+
+app.post('/api/products/bulk-upload', upload.single('productFile'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded.' });
+    }
+    res.status(202).json({ message: 'Upload received and is being processed.' });
+    const filePath = req.file.path;
+    const productsToInsert = [];
+    fs.createReadStream(filePath)
+        .pipe(csv.parse({ headers: true, ignoreEmpty: true }))
+        .on('error', error => {
+            console.error('Error parsing CSV:', error);
+            fs.unlinkSync(filePath);
+        })
+        .on('data', row => {
+            if (row.name && row.categoryId && row.price) {
+                productsToInsert.push([
+                    row.name,
+                    parseInt(row.categoryId, 10),
+                    parseFloat(row.price),
+                    row.description || null,
+                    row.imageUrl || null
+                ]);
+            }
+        })
+        .on('end', async (rowCount) => {
+            console.log(`Parsed ${rowCount} rows`);
+            if (productsToInsert.length > 0) {
+                try {
+                    const sql = 'INSERT INTO products (name, categoryId, price, description, imageUrl) VALUES ?';
+                    await db.query(sql, [productsToInsert]);
+                    console.log(`Successfully inserted ${productsToInsert.length} products.`);
+                } catch (error) {
+                    console.error('Error during bulk insert:', error);
+                }
+            }
+            fs.unlinkSync(filePath);
+        });
+});
+
+app.get('/api/products/report', async (req, res) => {
+    try {
+        const [products] = await db.execute(
+            'SELECT p.id, p.name, c.name AS category, p.price, p.description, p.imageUrl FROM products p JOIN categories c ON p.categoryId = c.id ORDER BY p.id'
+        );
+
+        const workbook = new exceljs.Workbook();
+        const worksheet = workbook.addWorksheet('Products');
+
+        worksheet.columns = [
+            { header: 'ID', key: 'id', width: 10 },
+            { header: 'Name', key: 'name', width: 30 },
+            { header: 'Category', key: 'category', width: 20 },
+            { header: 'Price', key: 'price', width: 10, style: { numFmt: '$#,##0.00' } },
+            { header: 'Description', key: 'description', width: 50 },
+            { header: 'Image URL', key: 'imageUrl', width: 50 }
+        ];
+
+        worksheet.addRows(products);
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename="product-report.xlsx"');
+
+        await workbook.xlsx.write(res);
+        res.end();
+
+    } catch (error) {
+        handleDbError(res, error, 'Failed to generate the report.');
+    }
+});
+
+app.listen(port, () => {
+    console.log(`API server listening at http://localhost:${port}`);
+});
