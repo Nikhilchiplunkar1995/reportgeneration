@@ -26,6 +26,9 @@
             ],
             "styles": [
               "src/styles.css"
+            ],
+            "allowedCommonJsDependencies": [
+              "file-saver"
             ]
           },
           "configurations": {
@@ -88,5 +91,8 @@
         }
       }
     }
+  },
+  "cli": {
+    "analytics": "1fe5b1be-790d-4c9b-829a-81acd0eb36ca"
   }
 }

@@ -1,4 +1,3 @@
-
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DataService } from '../services/data.service';
@@ -23,7 +22,7 @@ export class ProductDetailComponent {
     this.route.paramMap.pipe(
       switchMap(params => {
         const id = params.get('id');
-        return this.dataService.getProductById(Number(id));
+        return this.dataService.getProduct(Number(id));
       })
     ).subscribe(product => {
       this.product.set(product);

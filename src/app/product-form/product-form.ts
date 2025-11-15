@@ -37,13 +37,13 @@ export class ProductFormComponent {
   isEditMode = computed(() => this.product() !== undefined);
 
   constructor() {
-    this.dataService.getCategories().subscribe(categories => this.categories.set(categories));
+    this.dataService.getCategories().subscribe((categories: Category[]) => this.categories.set(categories));
 
     this.route.paramMap.pipe(
       switchMap(params => {
         const id = params.get('id');
         if (id) {
-          return this.dataService.getProductById(Number(id));
+          return this.dataService.getProduct(Number(id));
         }
         return of(undefined);
       })
@@ -78,7 +78,9 @@ export class ProductFormComponent {
         name: formValue.name!,
         description: formValue.description!,
         price: formValue.price!,
-        categoryId: formValue.categoryId!
+        categoryId: formValue.categoryId!,
+        imageUrl: '', // Add a default or placeholder value
+        sustainability_impact: 'Low' // Add a default or placeholder value
     };
 
     if (this.isEditMode()) {
@@ -86,7 +88,7 @@ export class ProductFormComponent {
         this.router.navigate(['/products', productData.id]);
       });
     } else {
-      this.dataService.createProduct(productData).subscribe(newProduct => {
+      this.dataService.createProduct(productData).subscribe((newProduct: Product) => {
         this.router.navigate(['/products', newProduct.id]);
       });
     }

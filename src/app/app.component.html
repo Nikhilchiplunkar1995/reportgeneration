@@ -1,0 +1,14 @@
+<header>
+  <h1>{{ title }}</h1>
+  <nav>
+    @if (authService.isAuthenticated$ | async) {
+      <a routerLink="/products" routerLinkActive="active">Products</a>
+      <a routerLink="/reporting" routerLinkActive="active">Reporting</a>
+      <button (click)="logout()">Logout</button>
+    }
+  </nav>
+</header>
+
+<main>
+  <router-outlet></router-outlet>
+</main>

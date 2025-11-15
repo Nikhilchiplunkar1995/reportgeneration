@@ -1,0 +1,88 @@
+.controls {
+    margin-bottom: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.filter-sort select {
+    padding: 0.5rem;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    margin-right: 1rem;
+}
+
+.product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.product-card {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    overflow: hidden;
+    transition: transform 0.3s ease;
+}
+
+.product-card:hover {
+    transform: translateY(-5px);
+}
+
+.product-card img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+}
+
+.product-card h3 {
+    padding: 1rem 1rem 0.5rem;
+    color: #333;
+}
+
+.product-card p {
+    padding: 0 1rem 1rem;
+    color: #666;
+}
+
+.impact-level {
+    padding: 1rem;
+    font-weight: bold;
+    border-top: 1px solid #eee;
+}
+
+.impact-level.High {
+    background-color: #f8d7da; /* Light red */
+    color: #721c24; /* Dark red */
+}
+
+.impact-level.Medium {
+    background-color: #fff3cd; /* Light yellow */
+    color: #856404; /* Dark yellow */
+}
+
+.impact-level.Low {
+    background-color: #d4edda; /* Light green */
+    color: #155724; /* Dark green */
+}
+
+.pagination-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 2rem;
+}
+
+.pagination-controls button {
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    cursor: pointer;
+    margin: 0 0.5rem;
+}
+
+.pagination-controls button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}

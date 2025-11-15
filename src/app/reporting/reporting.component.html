@@ -1,0 +1,30 @@
+<div class="reporting-container">
+  <h2>Bulk Product Upload</h2>
+  <div class="upload-section">
+    <input type="file" (change)="onFileSelected($event)" accept=".csv" #fileInput>
+    <button (click)="onUpload()" [disabled]="!selectedFile()">Upload</button>
+
+    @if (uploadProgress() !== null) {
+      <div class="progress-bar">
+        <div class="progress" [style.width.%]="uploadProgress()"></div>
+      </div>
+      <p>{{ uploadProgress() }}%</p>
+    }
+
+    @if (uploadMessage()) {
+      <p class="upload-message">{{ uploadMessage() }}</p>
+    }
+  </div>
+
+  <h2>Report Generation</h2>
+  <div class="report-section">
+    <p>Download a complete report of all products in XLSX format.</p>
+    <button (click)="downloadReport()" [disabled]="isDownloading()">
+      @if (isDownloading()) {
+        <span>Downloading...</span>
+      } @else {
+        <span>Download Report</span>
+      }
+    </button>
+  </div>
+</div>

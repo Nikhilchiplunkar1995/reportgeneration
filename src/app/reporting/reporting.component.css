@@ -1,0 +1,64 @@
+.reporting-container {
+  padding: 2rem;
+  max-width: 800px;
+  margin: auto;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+h2 {
+  color: #333;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.upload-section, .report-section {
+  margin-bottom: 2rem;
+}
+
+input[type="file"] {
+  display: block;
+  margin-bottom: 1rem;
+}
+
+button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+button:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.progress-bar {
+  width: 100%;
+  background-color: #e9ecef;
+  border-radius: 5px;
+  height: 20px;
+  margin-top: 1rem;
+  overflow: hidden;
+}
+
+.progress {
+  background-color: #28a745;
+  height: 100%;
+  transition: width 0.4s ease-in-out;
+}
+
+.upload-message {
+  margin-top: 1rem;
+  font-weight: bold;
+  color: #333;
+}

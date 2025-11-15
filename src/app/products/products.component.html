@@ -1,0 +1,33 @@
+<div class="controls">
+    <div class="filter-sort">
+        <select (change)="onSortChange($event)">
+            <option value="name">Sort by Name</option>
+            <option value="impact">Sort by Impact</option>
+        </select>
+        <select (change)="onCategoryChange($event)">
+            <option value="">All Categories</option>
+            @for (category of categories(); track category) {
+                <option [value]="category">{{ category }}</option>
+            }
+        </select>
+    </div>
+</div>
+
+<div class="product-grid">
+    @for (product of products(); track product.id) {
+        <div class="product-card">
+            <img [src]="product.imageUrl" alt="{{ product.name }}">
+            <h3>{{ product.name }}</h3>
+            <p>{{ product.description }}</p>
+            <div class="impact-level {{ product.sustainability_impact }}">
+                Sustainability Impact: <span>{{ product.sustainability_impact }}</span>
+            </div>
+        </div>
+    }
+</div>
+
+<div class="pagination-controls">
+    <button (click)="previousPage()" [disabled]="currentPage() === 1">Previous</button>
+    <span>Page {{ currentPage() }}</span>
+    <button (click)="nextPage()">Next</button>
+</div>

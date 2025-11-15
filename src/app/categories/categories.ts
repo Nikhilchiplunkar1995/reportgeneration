@@ -19,7 +19,7 @@ export class CategoriesComponent {
   }
 
   loadCategories() {
-    this.dataService.getCategories().subscribe(categories => {
+    this.dataService.getCategories().subscribe((categories: Category[]) => {
       this.categories.set(categories);
     });
   }

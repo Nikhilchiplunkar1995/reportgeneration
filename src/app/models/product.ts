@@ -4,4 +4,6 @@ export interface Product {
   description: string;
   price: number;
   categoryId: number;
+  imageUrl: string;
+  sustainability_impact: string;
 }

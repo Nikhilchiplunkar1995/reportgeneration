@@ -1,36 +1,23 @@
 import { Routes } from '@angular/router';
+import { ProductsComponent } from './products/products.component';
+import { ReportingComponent } from './reporting/reporting.component';
+import { LoginComponent } from './login/login.component';
+import { RegisterComponent } from './register/register.component';
+import { authGuard } from './auth.guard';
 
 export const routes: Routes = [
-    {
-        path: '',
-        loadComponent: () => import('./home/home').then(m => m.HomeComponent)
-    },
-    {
-        path: 'products',
-        loadComponent: () => import('./products/products').then(m => m.ProductsComponent)
-    },
-    {
-        path: 'products/new',
-        loadComponent: () => import('./product-form/product-form').then(m => m.ProductFormComponent)
-    },
-    {
-        path: 'products/:id',
-        loadComponent: () => import('./product-detail/product-detail').then(m => m.ProductDetailComponent)
-    },
-    {
-        path: 'products/:id/edit',
-        loadComponent: () => import('./product-form/product-form').then(m => m.ProductFormComponent)
-    },
-    {
-        path: 'categories',
-        loadComponent: () => import('./categories/categories').then(m => m.CategoriesComponent)
-    },
-    {
-        path: 'categories/new',
-        loadComponent: () => import('./category-form/category-form').then(m => m.CategoryFormComponent)
-    },
-    {
-        path: 'categories/:id/edit',
-        loadComponent: () => import('./category-form/category-form').then(m => m.CategoryFormComponent)
-    }
+  { path: 'login', component: LoginComponent },
+  { path: 'register', component: RegisterComponent },
+  { 
+    path: 'products', 
+    component: ProductsComponent,
+    canActivate: [authGuard]
+  },
+  { 
+    path: 'reporting', 
+    component: ReportingComponent,
+    canActivate: [authGuard]
+  },
+  { path: '', redirectTo: '/products', pathMatch: 'full' },
+  { path: '**', redirectTo: '/products' } // Redirect any other path to products
 ];

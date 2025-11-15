@@ -32,10 +32,10 @@ export class ProductsComponent {
   });
 
   constructor() {
-    this.dataService.getProducts().subscribe(products => {
+    this.dataService.getProducts(1, 'name', '').subscribe((products: Product[]) => {
       this.products.set(products);
     });
-    this.dataService.getCategories().subscribe(categories => {
+    this.dataService.getCategories().subscribe((categories: Category[]) => {
       this.categories.set(categories);
     });
   }
